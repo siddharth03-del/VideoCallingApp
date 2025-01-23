@@ -64,8 +64,8 @@ function Start(){
                     {
                         connections?.map((value)=>{
                             return (
-                                <div key={value.peer} className="flex flex-row">
-                                    <h1>{value.peer}</h1>
+                                <div key={value.peer} className="flex flex-row mb-5">
+                                    <h1 className="my-auto h-fit w-fit text-xs md:text-base">{value.peer}</h1>
                                     <div>
                                         <button className="h-fit w-fit border-[1px] border-black rounded-xl border-solid px-2 py-1 hover:text-blue-700 shadow-lg ml-4" onClick={()=>{VideoCallHandler(value.peer)}}>
                                             VideoCall

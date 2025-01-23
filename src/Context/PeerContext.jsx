@@ -7,6 +7,8 @@ export const PeerContextProvider = ({children})=>{
     const [userId, setuserId] = useState(null);
     const [connections, setConnections] = useState([]);
     const [remoteStream, setRemoteStream] = useState(null);
+    const [callObject, setCallObject] = useState(null);
+    const [openDialog, setOpenDialog] = useState(null);
     const navigate = useNavigate();
     function ConnectToServer(){
         const newPeer = new Peer();
@@ -26,12 +28,17 @@ export const PeerContextProvider = ({children})=>{
             })
         })
         newPeer.on('call', (call) => {
+            
+            setCallObject(call);
             console.log("answering a call");
             navigator.mediaDevices.getUserMedia({
               video: true,
               audio: true
             })
             .then((stream) => {
+              if(callObject){
+                throw new Error("User is on other call");
+              }
               call.answer(stream);
               call.on("stream", (remoteStream) => {
                 console.log(remoteStream)
@@ -45,8 +52,7 @@ export const PeerContextProvider = ({children})=>{
               console.log("failed to get remote stream:", err);
             });
           });
-          
-    }
+      }
     function MakeConnection(id){
         console.log(id);
         const new_connecton = peer.connect(id);
@@ -59,6 +65,26 @@ export const PeerContextProvider = ({children})=>{
         })
         return;
     }
+    function handleUserAction(action){
+      return new Promise((resolve, reject)=>{
+        if(action == 'answer'){
+          navigator.mediaDevices.getUserMedia(
+            {
+              video : true,
+              audio : true
+            }
+          )
+          .then((stream)=>{
+            resolve(stream);
+          })
+          .catch(()=>{
+            reject(new Error('Not able to get user media'));
+          })
+        }else{
+          reject(new Error("User rejected the call"));
+        }
+      })
+    }
     function VideoCall(id) {
         console.log("calling video call");
         navigator.mediaDevices.getUserMedia({
@@ -69,7 +95,7 @@ export const PeerContextProvider = ({children})=>{
           console.log(stream);
           const call = peer.call(id, stream);
           console.log("I have made the call");
-      
+          setCallObject(call);
           call.on('stream', (remoteStream) => {
             console.log("Hey I am streaming");
             console.log(remoteStream);
@@ -81,9 +107,23 @@ export const PeerContextProvider = ({children})=>{
           console.log("Failed to get local stream", err);
         });
       }
-      
+      function closeCall(localStreamComponent){
+        if(localStreamComponent.current.srcObject){
+            console.log("Stopping local stream: ")
+            localStreamComponent.current.srcObject.getTracks().forEach(track => {
+                track.stop();
+            })
+            localStreamComponent.current.srcObject = null;
+        }
+        if(callObject){
+            callObject.close();
+            console.log("Closing the call");
+            setCallObject(null);
+        }
+        navigate('/start');
+      }
     return(
-        <PeerContext.Provider value={{userId, setuserId, peer, setPeer, connections, setConnections, ConnectToServer, MakeConnection, VideoCall, remoteStream}}>
+        <PeerContext.Provider value={{userId, setuserId, peer, setPeer, connections, setConnections, ConnectToServer, MakeConnection, VideoCall, remoteStream, closeCall, callObject, setCallObject}}>
             {children}
         </PeerContext.Provider>
     )
